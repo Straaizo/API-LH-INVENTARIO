@@ -64,16 +64,7 @@ print(f"║ BD Nombre: {db_name:<45} ║")
 print("╠══════════════════════════════════════════════════════════╣")
 print()
 
-# ── 3. Abrir navegador después de 2 segundos (para que uvicorn arranque) ──────
-def abrir_navegador():
-    time.sleep(2)
-    webbrowser.open(f"{URL}/docs")
-    print(f"  → Navegador abierto en {URL}/docs")
-
-hilo = threading.Thread(target=abrir_navegador, daemon=True)
-hilo.start()
-
-# ── 4. Levantar uvicorn ───────────────────────────────────────────────────────
+# ── 3 & 4. Levantar uvicorn y abrir navegador ────────────────────────────────
 try:
     import uvicorn
 except ImportError:
@@ -83,7 +74,17 @@ except ImportError:
 # IMPORTANTE: el guard if __name__ == "__main__" es obligatorio en Windows
 # cuando reload=True usa multiprocessing (spawn). Sin esto, Python 3.12+
 # lanza RuntimeError al intentar crear subprocesos.
+# El navegador también debe abrirse aquí para que solo lo haga el proceso
+# principal, no el proceso hijo del reloader.
 if __name__ == "__main__":
+    def abrir_navegador():
+        time.sleep(2)
+        webbrowser.open(f"{URL}/docs")
+        print(f"  → Navegador abierto en {URL}/docs")
+
+    hilo = threading.Thread(target=abrir_navegador, daemon=True)
+    hilo.start()
+
     uvicorn.run(
         "main:app",
         host=HOST,
