@@ -11,11 +11,7 @@ API REST construida con **FastAPI** como base para las aplicaciones de gestión 
 - [Variables de entorno](#variables-de-entorno)
 - [Ejecutar el servidor](#ejecutar-el-servidor)
 - [Estructura del proyecto](#estructura-del-proyecto)
-- [Endpoints disponibles](#endpoints-disponibles)
-- [Autenticación JWT](#autenticación-jwt)
-- [Agregar nuevos módulos (routers)](#agregar-nuevos-módulos-routers)
-- [Despliegue con Docker](#despliegue-con-docker)
-- [Despliegue en Google Cloud Run](#despliegue-en-google-cloud-run)
+- [Endpoints de prueba](#endpoints-disponibles-de-prueba)
 
 ---
 
@@ -33,7 +29,7 @@ API REST construida con **FastAPI** como base para las aplicaciones de gestión 
 ```bash
 # 1. Clonar el repositorio
 git clone <url-del-repositorio>
-cd API_BASE-main
+
 
 # 2. Crear entorno virtual
 python -m venv venv
@@ -44,8 +40,8 @@ venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 
 # 4. Configurar variables de entorno
-cp .env.example .env
 # Editar .env con tus credenciales (ver sección Variables de entorno)
+
 ```
 
 ---
@@ -130,7 +126,7 @@ API_BASE-main/
 
 ---
 
-## Endpoints disponibles
+## Endpoints disponibles de prueba.
 
 ### Utilidades base
 
@@ -139,108 +135,8 @@ API_BASE-main/
 | GET | `/api/test-db` | Verifica la conexión a la base de datos | No |
 | GET | `/api/config` | Muestra la configuración activa (sin contraseñas) | No |
 
-### Módulos planificados
 
-| Prefijo | Descripción |
-|---------|-------------|
-| `/api/auth` | Login, registro, refresh token, cambio de contraseña |
-| `/api/usuarios` | Gestión de usuarios del sistema |
-| `/api/trabajadores` | Personal directo |
-| `/api/colaboradores` | Personal externo / subcontrato |
-| `/api/contratistas` | Empresas contratistas |
-| `/api/opciones` | Valores para listas desplegables |
 
----
-
-## Autenticación JWT
-
-La API usa **JSON Web Tokens (JWT)** con esquema `Bearer`.
-
-### Flujo
-
-1. El cliente hace `POST /api/auth/login` con credenciales.
-2. La API devuelve un `access_token` (válido 10 horas) y un `refresh_token` (válido 7 días).
-3. El cliente incluye el token en cada request protegido:
-
-```http
-Authorization: Bearer <access_token>
-```
-
-### Proteger un endpoint
-
-```python
-from utils.auth import get_current_user
-from fastapi import Depends
-
-@router.get("/datos-privados")
-def datos_privados(user_id: int = Depends(get_current_user)):
-    return {"usuario": user_id}
-```
-
----
-
-## Agregar nuevos módulos (routers)
-
-Ver [`routers/README.md`](routers/README.md) para la guía completa con ejemplos.
-
-Resumen rápido:
-
-```python
-# routers/mi_modulo.py
-from fastapi import APIRouter
-router = APIRouter()
-
-@router.get("/")
-def listar():
-    return {"data": []}
-```
-
-```python
-# main.py — registrar el router
-from routers import mi_modulo
-app.include_router(mi_modulo.router, prefix="/api/mi-modulo", tags=["Mi Módulo"])
-```
-
----
-
-## Despliegue con Docker
-
-```bash
-# Construir imagen
-docker build -t api-lahornilla .
-
-# Ejecutar contenedor
-docker run -p 8080:8080 --env-file .env api-lahornilla
-```
-
-La aplicación queda disponible en `http://localhost:8080`.
-
----
-
-## Despliegue en Google Cloud Run
-
-```bash
-# 1. Autenticarse en GCP
-gcloud auth login
-gcloud config set project TU_PROYECTO_ID
-
-# 2. Construir y subir imagen a Artifact Registry
-gcloud builds submit --tag gcr.io/TU_PROYECTO_ID/api-lahornilla
-
-# 3. Desplegar en Cloud Run
-gcloud run deploy api-lahornilla \
-  --image gcr.io/TU_PROYECTO_ID/api-lahornilla \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars "DATABASE_URL=mysql+pymysql://usuario:contraseña@/nombre_db?unix_socket=/cloudsql/proyecto:region:instancia" \
-  --set-env-vars "JWT_SECRET_KEY=tu_clave_secreta_segura" \
-  --add-cloudsql-instances TU_PROYECTO_ID:REGION:INSTANCIA
-```
-
-> Para Cloud Run, usa `DATABASE_URL` en lugar de las variables `DB_*` individuales.
-
----
 
 ## Dependencias principales
 
@@ -253,15 +149,4 @@ gcloud run deploy api-lahornilla \
 | mysql-connector-python | 9.2.0 | Driver MySQL |
 | python-dotenv | 1.0.1 | Carga de variables de entorno |
 
----
 
-## Seguridad en producción
-
-Antes de desplegar a producción, asegurarse de:
-
-- [ ] Cambiar `JWT_SECRET_KEY` por una clave aleatoria larga (mínimo 32 caracteres)
-- [ ] Establecer `DEBUG=False`
-- [ ] Configurar CORS solo con los orígenes permitidos en `main.py`
-- [ ] Usar HTTPS (Cloud Run lo maneja automáticamente)
-- [ ] Gestionar las variables de entorno mediante Secret Manager (GCP) o equivalente
-- [ ] Nunca incluir el archivo `.env` en el repositorio
