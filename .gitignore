@@ -1,0 +1,104 @@
+# =============================================
+# DATOS SENSIBLES - NUNCA SUBIR AL REPOSITORIO
+# =============================================
+.env
+.env.local
+.env.production
+.env.staging
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+service-account*.json
+gcp-credentials*.json
+
+# =============================================
+# PYTHON
+# =============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+.virtualenv/
+
+# Pytest / Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+
+# MyPy / Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+
+# =============================================
+# IDEs Y EDITORES
+# =============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# =============================================
+# SISTEMA OPERATIVO
+# =============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# =============================================
+# LOGS Y TEMPORALES
+# =============================================
+*.log
+logs/
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# =============================================
+# DOCKER
+# =============================================
+.dockerignore
+
+# =============================================
+# GOOGLE CLOUD
+# =============================================
+.gcloudignore
+app.yaml
