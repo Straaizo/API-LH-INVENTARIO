@@ -51,19 +51,6 @@ db_name = os.getenv("DB_NAME", "(no definida)")
 db_url  = os.getenv("DATABASE_URL", "")
 modo_bd = "Cloud SQL (DATABASE_URL)" if db_url else f"Datacenter/Local ({db_host})"
 
-print()
-print("╔══════════════════════════════════════════════════════════╗")
-print("║           API La Hornilla — FASTAPI                      ║")
-print("╠══════════════════════════════════════════════════════════╣")
-print(f"║ Servidor:   {URL:<45}║")
-print(f"║ Swagger UI: {URL + '/docs':<45}║")
-print(f"║ ReDoc:      {URL + '/redoc':<45}║")
-print("╠══════════════════════════════════════════════════════════╣")
-print(f"║ BD Modo:   {modo_bd:<45} ║")
-print(f"║ BD Nombre: {db_name:<45} ║")
-print("╠══════════════════════════════════════════════════════════╣")
-print()
-
 # ── 3 & 4. Levantar uvicorn y abrir navegador ────────────────────────────────
 try:
     import uvicorn
@@ -77,13 +64,32 @@ except ImportError:
 # El navegador también debe abrirse aquí para que solo lo haga el proceso
 # principal, no el proceso hijo del reloader.
 if __name__ == "__main__":
-    def abrir_navegador():
-        time.sleep(2)
-        webbrowser.open(f"{URL}/docs")
-        print(f"  → Navegador abierto en {URL}/docs")
+    # En Windows con reload=True, uvicorn usa multiprocessing (spawn) y el proceso
+    # hijo re-ejecuta este script con __name__ == "__main__" también.
+    # La variable de entorno es heredada por el hijo, evitando duplicados.
+    if not os.environ.get("_RUN_DEV_STARTED"):
+        os.environ["_RUN_DEV_STARTED"] = "1"
 
-    hilo = threading.Thread(target=abrir_navegador, daemon=True)
-    hilo.start()
+        print()
+        print("╔══════════════════════════════════════════════════════════╗")
+        print("║           API La Hornilla — FASTAPI                      ║")
+        print("╠══════════════════════════════════════════════════════════╣")
+        print(f"║ Servidor:   {URL:<45}║")
+        print(f"║ Swagger UI: {URL + '/docs':<45}║")
+        print(f"║ ReDoc:      {URL + '/redoc':<45}║")
+        print("╠══════════════════════════════════════════════════════════╣")
+        print(f"║ BD Modo:   {modo_bd:<45} ║")
+        print(f"║ BD Nombre: {db_name:<45} ║")
+        print("╠══════════════════════════════════════════════════════════╣")
+        print()
+
+        def abrir_navegador():
+            time.sleep(2)
+            webbrowser.open(f"{URL}/docs")
+            print(f"  → Navegador abierto en {URL}/docs")
+
+        hilo = threading.Thread(target=abrir_navegador, daemon=True)
+        hilo.start()
 
     uvicorn.run(
         "main:app",
