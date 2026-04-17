@@ -41,6 +41,26 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
 
 
+def get_current_user_payload(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    """Retorna el payload completo del JWT (sub, exp, claims adicionales como tipo, correo)."""
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, Config.JWT_SECRET_KEY, algorithms=["HS256"])
+        if payload.get("sub") is None:
+            raise HTTPException(status_code=401, detail="Token inválido")
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+
+
+def get_admin_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """Requiere JWT válido + que el UUID del usuario esté en Config.ADMIN_USER_IDS."""
+    user_id = get_current_user(credentials)
+    if user_id not in Config.ADMIN_USER_IDS:
+        raise HTTPException(status_code=403, detail="Acceso restringido a administradores")
+    return user_id
+
+
 def get_refresh_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
     token = credentials.credentials
     try:

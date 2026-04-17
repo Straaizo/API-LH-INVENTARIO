@@ -25,7 +25,15 @@ class Config:
     DB_NAME     = os.getenv("DB_NAME",     "lahornilla_base_normalizada")
 
     # ── JWT ───────────────────────────────────────────────────────────────────
-    # En producción esta clave DEBE venir del secreto de Cloud Run / GitHub Secret.
-    # Nunca hardcodear en el código fuente.
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "cambia_esto_en_produccion")
     SECRET_KEY     = os.getenv("SECRET_KEY",     JWT_SECRET_KEY)
+
+    # ── Roles ─────────────────────────────────────────────────────────────────
+    # IDs de usuarios con permisos de administrador (separados por coma en .env)
+    # Ejemplo: ADMIN_USER_IDS=1,2
+    # UUIDs (varchar) de usuarios con permisos de administrador
+    ADMIN_USER_IDS: set = {
+        x.strip()
+        for x in os.getenv("ADMIN_USER_IDS", "").split(",")
+        if x.strip()
+    }

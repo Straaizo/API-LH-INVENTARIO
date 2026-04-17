@@ -1,6 +1,6 @@
-# API La Hornilla
+# API La Hornilla — LH Inventario
 
-API REST construida con **FastAPI** como base para las aplicaciones de gestión de La Hornilla. Diseñada con arquitectura modular, autenticación JWT, y soporte para despliegue local, en datacenter y en **Google Cloud Run**.
+API REST con **FastAPI** para el inventario unificado de La Hornilla (tablas y rutas `*_LH_INVENTARIO` / `*_lh_inventario`). Diseñada con arquitectura modular, autenticación JWT, y soporte para despliegue local, en datacenter y en **Google Cloud Run**.
 
 ---
 

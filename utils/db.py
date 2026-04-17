@@ -40,8 +40,13 @@ def get_db_connection():
         logger.info("Modo Cloud SQL — usando DATABASE_URL")
         return _connect_cloud_sql(Config.DATABASE_URL)
 
-    # ── MODO 1: Conexión directa TCP (datacenter, servidor local, etc.) ───────
-    logger.info(f"Modo Datacenter/Local — host: {Config.DB_HOST}:{Config.DB_PORT}")
+    # ── MODO 1: Conexión TCP (proxy GCP o servidor local) ────────────────────
+    import os
+    db_env = os.getenv("DB_ENV", "local")
+    if db_env == "gcp_proxy":
+        logger.info(f"Modo GCP Cloud SQL (Proxy Local) — host: {Config.DB_HOST}:{Config.DB_PORT}")
+    else:
+        logger.info(f"Modo Datacenter/Local — host: {Config.DB_HOST}:{Config.DB_PORT}")
     return mysql.connector.connect(
         host=Config.DB_HOST,
         port=Config.DB_PORT,

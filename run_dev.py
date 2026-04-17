@@ -41,15 +41,22 @@ if not env_file.exists():
 from dotenv import load_dotenv
 load_dotenv(env_file)
 
-HOST    = "127.0.0.1"
-PORT    = int(os.getenv("DEV_PORT", 8000))
-RELOAD  = True
-URL     = f"http://{HOST}:{PORT}"
+HOST        = "0.0.0.0"
+PORT        = int(os.getenv("DEV_PORT", 8000))
+RELOAD      = True
+URL         = f"http://localhost:{PORT}"
+URL_LOCAL   = f"http://127.0.0.1:{PORT}"
 
-db_host = os.getenv("DB_HOST", "localhost")
-db_name = os.getenv("DB_NAME", "(no definida)")
-db_url  = os.getenv("DATABASE_URL", "")
-modo_bd = "Cloud SQL (DATABASE_URL)" if db_url else f"Datacenter/Local ({db_host})"
+db_host  = os.getenv("DB_HOST", "localhost")
+db_name  = os.getenv("DB_NAME", "(no definida)")
+db_url   = os.getenv("DATABASE_URL", "")
+db_env   = os.getenv("DB_ENV", "local")
+if db_url:
+    modo_bd = "Cloud SQL (DATABASE_URL)"
+elif db_env == "gcp_proxy":
+    modo_bd = f"GCP Cloud SQL (Proxy Local → {db_host})"
+else:
+    modo_bd = f"Datacenter/Local ({db_host})"
 
 # ── 3 & 4. Levantar uvicorn y abrir navegador ────────────────────────────────
 try:
@@ -72,7 +79,7 @@ if __name__ == "__main__":
 
         print()
         print("╔══════════════════════════════════════════════════════════╗")
-        print("║           API La Hornilla — FASTAPI                      ║")
+        print("║           API La Hornilla — LH Inventario                ║")
         print("╠══════════════════════════════════════════════════════════╣")
         print(f"║ Servidor:   {URL:<45}║")
         print(f"║ Swagger UI: {URL + '/docs':<45}║")
