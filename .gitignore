@@ -1,4 +1,10 @@
 # =============================================
+# SCRIPTS DE TESTING LOCAL — NO SUBIR
+# =============================================
+test_ratelimit.py
+qa_security_test.py
+
+# =============================================
 # DATOS SENSIBLES - NUNCA SUBIR AL REPOSITORIO
 # =============================================
 .env
