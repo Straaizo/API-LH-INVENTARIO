@@ -21,6 +21,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from utils.auth import get_current_user
+from utils import global_rate_limit
 
 from config import Config
 from utils.db import get_db_connection
@@ -140,6 +141,19 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": "Error interno del servidor"},
     )
+
+
+# ── Rate limiting global ──────────────────────────────────────────────────────
+@app.middleware("http")
+async def global_rate_limit_middleware(request: Request, call_next):
+    blocked, ip = global_rate_limit.check_and_record(request)
+    if blocked:
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Demasiadas peticiones. Intente más tarde."},
+            headers={"Retry-After": "1800"},
+        )
+    return await call_next(request)
 
 
 # ── Security headers — oculta info del servidor y bloquea filtraciones ───────
