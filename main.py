@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 
 from utils.auth import get_current_user
 from utils import global_rate_limit
+from utils.audit_log import audit_middleware
 
 from config import Config
 from utils.db import get_db_connection
@@ -141,6 +142,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": "Error interno del servidor"},
     )
+
+
+# ── Auditoría ────────────────────────────────────────────────────────────────
+app.middleware("http")(audit_middleware)
 
 
 # ── Rate limiting global ──────────────────────────────────────────────────────

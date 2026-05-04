@@ -18,7 +18,11 @@ from fastapi.responses import JSONResponse
 
 from schemas.auth import LoginRequest, LoginResponse, RegisterRequest, UsuarioListResponse, UsuarioOut
 from schemas.base import RESP_400, RESP_401, RESP_404, RESP_409, RESP_500
-from utils.auth import create_access_token, get_admin_user, get_current_user, get_current_user_payload
+from utils.auth import (
+    create_access_token, create_refresh_token,
+    get_admin_user, get_current_user, get_current_user_payload, get_refresh_payload,
+)
+from utils.token_blacklist import blacklist_token
 from utils.db import get_db_connection
 from utils.errors import server_error
 from utils.rate_limit import is_blocked, record_failure, record_success
@@ -206,6 +210,7 @@ async def login(request: Request, _body: LoginRequest = Body(default=None)):
             identity=str(id_u),
             additional_claims={"tipo": "dim_usuario_lh_inventario", "correo": correo_db},
         )
+        refresh_token = create_refresh_token(identity=str(id_u))
         usuario_data = {
             "id": str(id_u),
             "usuario": _safe_value(usuario_db) or "",
@@ -217,6 +222,7 @@ async def login(request: Request, _body: LoginRequest = Body(default=None)):
             "access_token": access_token,
             "accessToken": access_token,
             "token": access_token,
+            "refresh_token": refresh_token,
             "token_type": "bearer",
             "usuario": usuario_data,
             "user": usuario_data,
@@ -224,6 +230,56 @@ async def login(request: Request, _body: LoginRequest = Body(default=None)):
         }
     except Exception as e:
         return server_error(e, "login")
+
+
+@router.post(
+    "/logout",
+    summary="Cerrar sesión",
+    description="Revoca el access token actual. El token queda invalidado hasta su expiración natural.",
+    responses={**RESP_401, **RESP_500},
+)
+def logout(payload: dict = Depends(get_current_user_payload)):
+    jti = payload.get("jti", "")
+    exp = payload.get("exp", 0)
+    if jti:
+        blacklist_token(jti, float(exp))
+    return {"message": "Sesión cerrada"}
+
+
+@router.post(
+    "/refresh",
+    summary="Renovar access token",
+    description="Recibe un refresh token vigente y retorna un nuevo par access/refresh token. El refresh anterior queda revocado.",
+    responses={**RESP_401, **RESP_500},
+)
+def refresh_tokens(payload: dict = Depends(get_refresh_payload)):
+    old_jti = payload.get("jti", "")
+    old_exp = payload.get("exp", 0)
+    if old_jti:
+        blacklist_token(old_jti, float(old_exp))
+
+    user_id = payload.get("sub")
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT correo FROM {TABLE} WHERE {PK} = %s", (user_id,))
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        correo = _safe_value(row[0]) if row else ""
+    except Exception:
+        correo = ""
+
+    access_token = create_access_token(
+        identity=user_id,
+        additional_claims={"tipo": "dim_usuario_lh_inventario", "correo": correo or ""},
+    )
+    new_refresh = create_refresh_token(identity=user_id)
+    return {
+        "access_token": access_token,
+        "refresh_token": new_refresh,
+        "token_type": "bearer",
+    }
 
 
 @router.post(
