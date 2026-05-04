@@ -375,6 +375,26 @@ def me(payload: dict = Depends(get_current_user_payload)):
 
 
 @router.get(
+    "/nombres",
+    summary="Listar id y nombre de usuarios",
+    description="Retorna solo id y nombre de cada usuario. Para mapas internos. Requiere autenticación.",
+    include_in_schema=False,
+)
+def listar_nombres(current_user: str = Depends(get_current_user)):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT {PK}, {COL_NOMBRE} FROM {TABLE} ORDER BY {COL_NOMBRE}")
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return {"data": [{"id": str(r[0]), "nombre": _safe_value(r[1]) or ""} for r in rows]}
+    except Exception as e:
+        logger.exception("dim_usuario listar_nombres")
+        return server_error(e)
+
+
+@router.get(
     "",
     summary="Listar todos los usuarios",
     description="Retorna el listado completo de usuarios. Requiere autenticación.",
