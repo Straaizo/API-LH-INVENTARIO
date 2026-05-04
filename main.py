@@ -197,14 +197,14 @@ CORS_ORIGINS_FIJOS = [
     "https://www.lh-toner.web.app",
 ]
 
-# En desarrollo se permite red local; en producción solo orígenes conocidos
+# En desarrollo se permite red local; en producción se permite localhost para testing desde Flutter Web
 _cors_regex = (
     r"http://(localhost|127\.0\.0\.1"
     r"|192\.168\.\d{1,3}\.\d{1,3}"
     r"|10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
     r"|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}"
     r")(:\d+)?"
-) if Config.DEBUG else None
+)
 
 app.add_middleware(
     CORSMiddleware,
