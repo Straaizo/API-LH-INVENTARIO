@@ -12,13 +12,8 @@ class Config:
     # Si no está definida, se usa la configuración host/user/password.
     DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-    # Cuando corre en Cloud Run (K_SERVICE definido) el proxy escucha en localhost.
-    if os.getenv("K_SERVICE"):
-        DB_HOST = "localhost"
-        DB_PORT = 3306
-    else:
-        DB_HOST = os.getenv("DB_HOST", "localhost")
-        DB_PORT = int(os.getenv("DB_PORT", 3306))
+    DB_HOST = os.getenv("DB_HOST", "localhost")
+    DB_PORT = int(os.getenv("DB_PORT", 3306))
 
     DB_USER     = os.getenv("DB_USER",     "UserApp")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")

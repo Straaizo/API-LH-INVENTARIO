@@ -195,6 +195,8 @@ async def security_headers_middleware(request: Request, call_next):
 CORS_ORIGINS_FIJOS = [
     "https://lh-toner.web.app",
     "https://www.lh-toner.web.app",
+    "https://lh-inventario.web.app",
+    "https://www.lh-inventario.web.app",
 ]
 
 # En desarrollo se permite red local; en producción se permite localhost para testing desde Flutter Web
