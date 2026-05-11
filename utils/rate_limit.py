@@ -1,9 +1,12 @@
 """
-Rate limiting por IP — protección contra fuerza bruta.
+Rate limiting por IP — protección contra fuerza bruta en login.
 Bloquea la IP tras MAX_ATTEMPTS intentos fallidos en WINDOW_SECONDS segundos.
-Todos los eventos quedan registrados en el log del servidor.
+
+Whitelist: definir RATE_LIMIT_WHITELIST en .env con IPs separadas por coma.
+           Usar * para saltear completamente en modo DEBUG.
 """
 import logging
+import os
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -11,9 +14,18 @@ from threading import Lock
 
 logger = logging.getLogger(__name__)
 
-MAX_ATTEMPTS   = 5      # intentos fallidos antes de bloquear
-WINDOW_SECONDS = 900    # 15 min — ventana de conteo
-BLOCK_SECONDS  = 1800   # 30 min — duración del bloqueo
+MAX_ATTEMPTS   = 5
+WINDOW_SECONDS = 900
+BLOCK_SECONDS  = 1800
+
+_DEBUG: bool = os.getenv("DEBUG", "True") == "True"
+
+# IPs que nunca se bloquean. "*" = todas (útil en DEBUG/testing)
+_WHITELIST: set[str] = {
+    ip.strip()
+    for ip in os.getenv("RATE_LIMIT_WHITELIST", "").split(",")
+    if ip.strip()
+}
 
 
 @dataclass
@@ -34,17 +46,22 @@ def _real_ip(request) -> str:
     return (request.client and request.client.host) or "unknown"
 
 
+def _is_whitelisted(ip: str) -> bool:
+    if "*" in _WHITELIST:
+        return True
+    return ip in _WHITELIST
+
+
 def is_blocked(request) -> tuple[bool, str]:
-    """Retorna (bloqueado, ip). Loguea si la IP está bloqueada."""
     ip  = _real_ip(request)
+    if _is_whitelisted(ip):
+        return False, ip
     now = time.time()
     with _lock:
         st = _store[ip]
         if st.blocked_until > now:
             secs = int(st.blocked_until - now)
-            logger.warning(
-                "[RATE-LIMIT] Acceso denegado — IP bloqueada: %s | %ds restantes", ip, secs
-            )
+            logger.warning("[RATE-LIMIT] IP bloqueada: %s | %ds restantes", ip, secs)
             return True, ip
         if now - st.window_start > WINDOW_SECONDS:
             st.attempts      = 0
@@ -54,8 +71,9 @@ def is_blocked(request) -> tuple[bool, str]:
 
 
 def record_failure(request) -> bool:
-    """Registra intento fallido. Retorna True si la IP queda bloqueada ahora."""
     ip  = _real_ip(request)
+    if _is_whitelisted(ip):
+        return False
     now = time.time()
     with _lock:
         st = _store[ip]
@@ -66,19 +84,16 @@ def record_failure(request) -> bool:
         if st.attempts >= MAX_ATTEMPTS:
             st.blocked_until = now + BLOCK_SECONDS
             logger.warning(
-                "[RATE-LIMIT] IP BLOQUEADA — %d intentos fallidos: %s | bloqueada hasta %s UTC",
+                "[RATE-LIMIT] IP BLOQUEADA — %d intentos: %s | hasta %s UTC",
                 st.attempts, ip,
                 time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(st.blocked_until)),
             )
             return True
-        logger.warning(
-            "[RATE-LIMIT] Login fallido %d/%d — IP: %s", st.attempts, MAX_ATTEMPTS, ip
-        )
+        logger.warning("[RATE-LIMIT] Login fallido %d/%d — IP: %s", st.attempts, MAX_ATTEMPTS, ip)
         return False
 
 
 def record_success(request) -> None:
-    """Limpia el contador tras autenticación exitosa."""
     ip = _real_ip(request)
     with _lock:
         if ip in _store:
