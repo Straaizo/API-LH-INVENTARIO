@@ -181,7 +181,7 @@ async def login(request: Request, _body: LoginRequest = Body(default=None)):
         cursor = conn.cursor()
         cursor.execute(
             f"""
-            SELECT {PK}, usuario, correo, {COL_PASS}, {COL_NOMBRE}
+            SELECT {PK}, usuario, correo, {COL_PASS}, {COL_NOMBRE}, estado
             FROM {TABLE}
             WHERE LOWER(TRIM(correo)) = %s OR LOWER(TRIM(usuario)) = %s
             LIMIT 1
@@ -189,21 +189,43 @@ async def login(request: Request, _body: LoginRequest = Body(default=None)):
             (ident_lower, ident_lower),
         )
         row = cursor.fetchone()
-        cursor.close()
-        conn.close()
 
         if not row:
+            cursor.close()
+            conn.close()
             bcrypt.checkpw(contrasena.encode("utf-8"), _DUMMY_HASH.encode("utf-8"))
             record_failure(request)
             return JSONResponse(status_code=401, content={"error": "Credenciales incorrectas"})
 
-        id_u, usuario_db, correo_db, clave_hash, nombre_persona = (
+        id_u, usuario_db, correo_db, clave_hash, nombre_persona, estado_u = (
             row[0], row[1], row[2], row[3],
             row[4] if len(row) > 4 else None,
+            row[5] if len(row) > 5 else None,
         )
+
         if not _verify_password(contrasena, clave_hash):
+            cursor.close()
+            conn.close()
             record_failure(request)
             return JSONResponse(status_code=401, content={"error": "Credenciales incorrectas"})
+
+        # Validar estado activo
+        if estado_u is not None and str(estado_u).strip() not in ("1", "activo", "Activo", "ACTIVO", "true", "True"):
+            cursor.close()
+            conn.close()
+            return JSONResponse(status_code=403, content={"error": "Tu cuenta está desactivada. Contacta al administrador."})
+
+        # Validar acceso a LH INVENTARIO (id_app = 10)
+        cursor.execute(
+            "SELECT 1 FROM usuario_pivot_app_usuario WHERE id_usuario = %s AND id_app = %s LIMIT 1",
+            (str(id_u), 10),
+        )
+        tiene_acceso = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not tiene_acceso:
+            return JSONResponse(status_code=403, content={"error": "No tienes acceso a esta aplicación."})
 
         record_success(request)
         access_token = create_access_token(
