@@ -202,6 +202,8 @@ CORS_ORIGINS_FIJOS = [
     "https://www.lh-toner.web.app",
     "https://lh-inventario.web.app",
     "https://www.lh-inventario.web.app",
+    "https://lh-inventario.lahornilla.cl",
+    "https://www.lh-inventario.lahornilla.cl",
 ]
 
 # En desarrollo se permite red local; en producción se permite localhost para testing desde Flutter Web
