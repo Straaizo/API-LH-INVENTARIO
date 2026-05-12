@@ -179,9 +179,10 @@ async def login(request: Request, _body: LoginRequest = Body(default=None)):
 
         conn = get_db_connection()
         cursor = conn.cursor()
+
         cursor.execute(
             f"""
-            SELECT {PK}, usuario, correo, {COL_PASS}, {COL_NOMBRE}, estado
+            SELECT {PK}, usuario, correo, {COL_PASS}, {COL_NOMBRE}, id_estado
             FROM {TABLE}
             WHERE LOWER(TRIM(correo)) = %s OR LOWER(TRIM(usuario)) = %s
             LIMIT 1
@@ -189,6 +190,7 @@ async def login(request: Request, _body: LoginRequest = Body(default=None)):
             (ident_lower, ident_lower),
         )
         row = cursor.fetchone()
+        estado_u = row[5] if row and len(row) > 5 else None
 
         if not row:
             cursor.close()
@@ -197,11 +199,11 @@ async def login(request: Request, _body: LoginRequest = Body(default=None)):
             record_failure(request)
             return JSONResponse(status_code=401, content={"error": "Credenciales incorrectas"})
 
-        id_u, usuario_db, correo_db, clave_hash, nombre_persona, estado_u = (
-            row[0], row[1], row[2], row[3],
-            row[4] if len(row) > 4 else None,
-            row[5] if len(row) > 5 else None,
-        )
+        id_u      = row[0]
+        usuario_db    = row[1]
+        correo_db     = row[2]
+        clave_hash    = row[3]
+        nombre_persona = row[4] if len(row) > 4 else None
 
         if not _verify_password(contrasena, clave_hash):
             cursor.close()
@@ -209,18 +211,21 @@ async def login(request: Request, _body: LoginRequest = Body(default=None)):
             record_failure(request)
             return JSONResponse(status_code=401, content={"error": "Credenciales incorrectas"})
 
-        # Validar estado activo
-        if estado_u is not None and str(estado_u).strip() not in ("1", "activo", "Activo", "ACTIVO", "true", "True"):
+        # Validar id_estado = 1 (activo)
+        if estado_u is not None and int(estado_u) != 1:
             cursor.close()
             conn.close()
             return JSONResponse(status_code=403, content={"error": "Tu cuenta está desactivada. Contacta al administrador."})
 
         # Validar acceso a LH INVENTARIO (id_app = 10)
-        cursor.execute(
-            "SELECT 1 FROM usuario_pivot_app_usuario WHERE id_usuario = %s AND id_app = %s LIMIT 1",
-            (str(id_u), 10),
-        )
-        tiene_acceso = cursor.fetchone()
+        try:
+            cursor.execute(
+                "SELECT 1 FROM usuario_pivot_app_usuario WHERE id_usuario = %s AND id_app = %s LIMIT 1",
+                (str(id_u), 10),
+            )
+            tiene_acceso = cursor.fetchone()
+        except Exception:
+            tiene_acceso = None
         cursor.close()
         conn.close()
 
