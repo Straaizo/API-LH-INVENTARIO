@@ -339,58 +339,6 @@ def register(body: dict = Body(default={}), current_user: str = Depends(get_admi
         return server_error(e, "register")
 
 
-@router.get(
-    "/perfil",
-    summary="Consultar perfil por correo o usuario",
-    description="Retorna datos del perfil buscando por `email`, `correo` o `usuario`. Requiere autenticación.",
-    responses={
-        **RESP_400,
-        **RESP_401,
-        **RESP_404,
-        **RESP_500,
-    },
-)
-def perfil(
-    email: Optional[str] = Query(default=None),
-    correo: Optional[str] = Query(default=None),
-    usuario: Optional[str] = Query(default=None),
-    current_user: str = Depends(get_current_user),
-):
-    try:
-        ident = (email or correo or usuario or "").strip().lower()
-        if not ident:
-            return JSONResponse(status_code=400, content={"error": "Parámetro email, correo o usuario requerido"})
-        ok_p, err_p = _validar_identificador_login(ident)
-        if not ok_p:
-            return JSONResponse(status_code=400, content={"error": err_p or "identificador inválido"})
-
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            f"""
-            SELECT {PK}, usuario, correo, {COL_NOMBRE}
-            FROM {TABLE}
-            WHERE LOWER(TRIM(correo)) = %s OR LOWER(TRIM(usuario)) = %s
-            LIMIT 1
-            """,
-            (ident, ident),
-        )
-        row = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        if not row:
-            return JSONResponse(status_code=404, content={"error": "Usuario no encontrado"})
-        u = {
-            "id": str(row[0]),
-            "usuario": _safe_value(row[1]) or "",
-            "correo": _safe_value(row[2]) or "",
-            "nombre": _safe_value(row[3]) if len(row) > 3 else "",
-        }
-        return {"usuario": u, "user": u}
-    except Exception as e:
-        logger.exception("perfil")
-        return server_error(e)
-
 
 @router.get(
     "/me",
@@ -460,7 +408,7 @@ def listar_nombres(current_user: str = Depends(get_current_user)):
         **RESP_500,
     },
 )
-def listar(current_user: str = Depends(get_current_user)):
+def listar(current_user: str = Depends(get_admin_user)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -495,7 +443,7 @@ def listar(current_user: str = Depends(get_current_user)):
         **RESP_500,
     },
 )
-def obtener(id_usuario: str, current_user: str = Depends(get_current_user)):
+def obtener(id_usuario: str, current_user: str = Depends(get_admin_user)):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()

@@ -5,7 +5,7 @@ load_dotenv()
 
 
 class Config:
-    DEBUG = os.getenv("DEBUG", "True") == "True"
+    DEBUG = os.getenv("DEBUG", "False") == "True"
 
     # ── Conexión a base de datos ──────────────────────────────────────────────
     # DATABASE_URL se usa en Cloud Run (Cloud SQL Proxy vía unix socket).
